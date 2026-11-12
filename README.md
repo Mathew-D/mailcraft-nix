@@ -32,7 +32,7 @@ Fetches the latest upstream release, updates the version and hash in `package.ni
 
 ## Version
 
-Currently packages MailCraft v0.11.0
+Currently packages MailCraft v0.12.0
 
 ## License
 

@@ -23,14 +23,14 @@
 
 stdenv.mkDerivation rec {
   pname = "mailcraft";
-  version = "0.11.0";
+  version = "0.12.0";
 
   src = appimageTools.extract {
     pname = "mailcraft";
     inherit version;
     src = fetchurl {
       url = "https://github.com/UCS-Care-Group/mailcraft/releases/download/v${version}/mailcraft-${version}-linux-x86_64.AppImage";
-      hash = "sha256-nOmJsLF5FoLbcbVgDjZHDvSFEgrvPDWwk7Y44tpmNNA=";
+      hash = "sha256-BWTvCD/xI37KaCNQNN8Ju8PubrtYaf/lCdLL0J5T7FE=";
     };
   };
 

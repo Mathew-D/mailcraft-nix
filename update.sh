@@ -6,7 +6,32 @@ cd "$repo_dir"
 
 api_url="https://api.github.com/repos/UCS-Care-Group/mailcraft/releases/latest"
 
-latest_tag="$(curl -fsSL "$api_url" | python3 -c 'import sys, json; print(json.load(sys.stdin).get("tag_name", ""))')"
+tmp_release_json=""
+tmp_file=""
+cleanup() {
+  [[ -n "$tmp_release_json" ]] && rm -f "$tmp_release_json"
+  [[ -n "$tmp_file" ]] && rm -f "$tmp_file"
+}
+trap cleanup EXIT
+
+tmp_release_json="$(mktemp /tmp/mailcraft-release.XXXXXX.json)"
+curl -fsSL "$api_url" -o "$tmp_release_json"
+
+if [[ ! -s "$tmp_release_json" ]]; then
+  echo "Error: Empty response from GitHub releases API." >&2
+  exit 1
+fi
+
+latest_tag="$(python3 - "$tmp_release_json" <<'PY'
+import json
+import sys
+
+release_path = sys.argv[1]
+with open(release_path, 'r', encoding='utf-8') as f:
+    release = json.load(f)
+print(release.get('tag_name', ''))
+PY
+)"
 if [[ -z "$latest_tag" ]]; then
   echo "Error: Could not fetch the latest upstream release." >&2
   exit 1
@@ -28,9 +53,14 @@ if [[ "$current_version" == "$version" ]]; then
   exit 0
 fi
 
-appimage_url="$(curl -fsSL "$api_url" | python3 - <<'PY'
-import json, sys
-release = json.load(sys.stdin)
+appimage_url="$(python3 - "$tmp_release_json" <<'PY'
+import json
+import sys
+
+release_path = sys.argv[1]
+with open(release_path, 'r', encoding='utf-8') as f:
+  release = json.load(f)
+
 for asset in release.get('assets', []):
     name = asset.get('name', '')
     if name.endswith('-linux-x86_64.AppImage'):
@@ -47,7 +77,6 @@ if [[ -z "$appimage_url" ]]; then
 fi
 
 tmp_file="$(mktemp /tmp/mailcraft-update.XXXXXX.AppImage)"
-trap 'rm -f "$tmp_file"' EXIT
 
 curl -fsSL "$appimage_url" -o "$tmp_file"
 sha256_hex="$(sha256sum "$tmp_file" | awk '{print $1}')"
