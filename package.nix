@@ -5,6 +5,8 @@
   appimageTools,
   autoPatchelfHook,
   makeWrapper,
+  cacert,
+  p11-kit,
   # linked
   alsa-lib,
   # dlopen()ed
@@ -65,10 +67,24 @@ stdenv.mkDerivation rec {
   # Some apps preflight their libraries with `ldconfig -p`, which can't see the
   # RPATH above (dlopen finds them fine), then warn or refuse to start.
   postFixup = ''
+    ca_bundle="${cacert}/etc/ssl/certs/ca-bundle.crt"
+    pkcs11_module="${lib.getLib p11-kit}/lib/p11-kit-proxy.so"
+
     for bin in $out/bin/*; do
       var="$(basename "$bin" | tr 'a-z-' 'A-Z_')_SKIP_LIB_CHECK"
+      wrap_args=(
+        --set-default SSL_CERT_FILE "$ca_bundle"
+        --set-default NIX_SSL_CERT_FILE "$ca_bundle"
+      )
+
+      if [ -f "$pkcs11_module" ]; then
+        wrap_args+=(--set-default MAILCRAFT_PKCS11_MODULE "$pkcs11_module")
+      fi
+
       if grep -qa "$var" "$bin"; then
-        wrapProgram "$bin" --set-default "$var" 1
+        wrapProgram "$bin" --set-default "$var" 1 "''${wrap_args[@]}"
+      else
+        wrapProgram "$bin" "''${wrap_args[@]}"
       fi
     done
   '';

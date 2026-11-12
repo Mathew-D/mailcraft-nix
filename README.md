@@ -34,6 +34,49 @@ Fetches the latest upstream release, updates the version and hash in `package.ni
 
 Currently packages MailCraft v0.12.0
 
+## Troubleshooting
+
+### Linux trust anchors warning
+
+If MailCraft logs:
+
+```
+no certification authorities for mail could be read
+```
+
+it means MailCraft could not find the mail-purpose trust bundle at one of its
+hardcoded paths:
+
+- `/etc/ca-certificates/extracted/email-ca-bundle.pem`
+- `/etc/pki/ca-trust/extracted/pem/email-ca-bundle.pem`
+- `/var/lib/ca-certificates/email-ca-bundle.pem`
+
+On systems where this bundle is not generated automatically, create it from
+p11-kit:
+
+```bash
+sudo mkdir -p /etc/ca-certificates/extracted
+sudo nix shell nixpkgs#p11-kit -c trust extract \
+  --overwrite \
+  --format=pem-bundle \
+  --filter=ca-anchors \
+  --purpose=email \
+  /etc/ca-certificates/extracted/email-ca-bundle.pem
+```
+
+After that, restart MailCraft.
+
+### zbus ServiceUnknown warning
+
+This warning:
+
+```
+zbus::proxy: Failed to populate properties cache via GetAll: org.freedesktop.DBus.Error.ServiceUnknown
+```
+
+is usually benign on minimal desktops/sessions without the related D-Bus
+service. MailCraft should still run.
+
 ## License
 
 MailCraft is licensed under Apache-2.0.
